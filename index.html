@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maximum Reality Card Game Hub</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background-color: #111;
+    color: #fff;
+    margin: 0;
+    padding: 20px;
+    overflow-x: hidden;
+}
+h1 { text-align: center; }
+button, select {
+    padding: 10px 20px;
+    margin: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+#gameSelector { margin-bottom: 20px; }
+#deckCount { font-weight: bold; margin-left: 10px; }
+#table, .hand, #discardPile, #blackjackTable {
+    background-color: #111;
+    border-radius: 8px;
+}
+.hand, #discardPile {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+    min-height: 150px;
+    background-color: #222;
+    border-radius: 8px;
+    padding: 5px;
+    overflow-x: auto;
+}
+.hand-slot, .discard-slot {
+    width: 100px;
+    height: 140px;
+    border: 2px dashed #555;
+    border-radius: 8px;
+    flex-shrink: 0;
+    position: relative;
+}
+.card {
+    width: 100px;
+    height: 140px;
+    border-radius: 8px;
+    background: transparent;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.6);
+    cursor: grab;
+    position: relative;
+    flex-shrink: 0;
+    transition: left 0.2s, top 0.2s;
+}
+.card img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: contain;
+    background: transparent;
+}
+.joker-card { border: 3px solid #ff0; }
+.hidden { display: none; }
+#table, #blackjackTable { width: 100%; height: 60vh; border: 2px solid #222; position: relative; margin-top: 20px; }
+#blackjackControls button { margin: 10px; }
+</style>
+</head>
+<body>
+
+<h1>Maximum Reality Card Game Hub</h1>
+
+<select id="gameSelector">
+    <option value="solitaire">Solitaire</option>
+    <option value="blackjack">Blackjack</option>
+    <option value="quickdraw">Quickdraw</option>
+</select>
+
+<button id="resetBtn">Reset Game</button>
+<span id="deckCount">Deck: 54 cards</span>
+
+<!-- SOLITAIRE -->
+<div id="solitaireGame">
+    <div id="table"></div>
+    <h2>Player 1 Hand</h2>
+    <div id="player1Hand" class="hand"></div>
+    <h2>Player 2 Hand</h2>
+    <div id="player2Hand" class="hand"></div>
+    <h2>Discard Pile</h2>
+    <div id="discardPile"><h3>Discard</h3></div>
+    <button id="drawSolitaire">Draw Card</button>
+</div>
+
+<!-- BLACKJACK -->
+<div id="blackjackGame" class="hidden">
+    <div id="blackjackTable">
+        <h2>Dealer Hand</h2>
+        <div id="dealerHand" class="hand"></div>
+        <h2>Player Hand</h2>
+        <div id="playerHand" class="hand"></div>
+    </div>
+    <div id="blackjackControls">
+        <button id="hitBtn">Hit</button>
+        <button id="standBtn">Stand</button>
+    </div>
+</div>
+
+<!-- QUICKDRAW -->
+<div id="quickdrawGame" class="hidden">
+    <div id="quickdrawTable" style="width:100%; height:60vh; border:2px solid #222; position:relative; margin-top:20px;"></div>
+    <button id="drawQuickdraw">Draw Card</button>
+</div>
+
+<script>
+// === Shared Variables ===
+const githubBase = 'https://raw.githubusercontent.com/MaximumReality/maximum-reality-cards/main/';
+const suits = ['hearts','diamonds','clubs','spades'];
+const numbers = ['2','3','4','5','6','7','8','9','10'];
+const faces = ['j','q','k','a'];
+let deck = [];
+let zIndexCounter = 1;
+
+// Game Selector
+const gameSelector = document.getElementById('gameSelector');
+const solitaireDiv = document.getElementById('solitaireGame');
+const blackjackDiv = document.getElementById('blackjackGame');
+const quickdrawDiv = document.getElementById('quickdrawGame');
+
+gameSelector.addEventListener('change', ()=>{
+    solitaireDiv.classList.add('hidden');
+    blackjackDiv.classList.add('hidden');
+    quickdrawDiv.classList.add('hidden');
+    const selected = gameSelector.value;
+    if(selected==='solitaire') solitaireDiv.classList.remove('hidden');
+    if(selected==='blackjack') blackjackDiv.classList.remove('hidden');
+    if(selected==='quickdraw') quickdrawDiv.classList.remove('hidden');
+});
+
+// === Deck Utility ===
+function buildDeck(){
+    let tempDeck=[];
+    for(let suit of suits){
+        for(let num of numbers) tempDeck.push(`${num}_${suit}.png`);
+        for(let face of faces) tempDeck.push(`${face}_${suit}.png`);
+    }
+    tempDeck.push('joker.png');
+    shuffle(tempDeck);
+    deck=tempDeck;
+    updateDeckCount();
+}
+function shuffle(array){
+    for(let i=array.length-1;i>0;i--){
+        const j=Math.floor(Math.random()*(i+1));
+        [array[i],array[j]]=[array[j],array[i]];
+    }
+}
+function updateDeckCount(){
+    document.getElementById('deckCount').textContent=`Deck: ${deck.length} cards`;
+}
+
+// === COMMON Card Creation ===
+function createCard(cardFile){
+    const cardDiv=document.createElement('div');
+    cardDiv.className='card';
+    cardDiv.style.zIndex=zIndexCounter++;
+    const img=document.createElement('img');
+    img.src=githubBase + cardFile;
+    cardDiv.appendChild(img);
+    if(cardFile==='joker.png') cardDiv.classList.add('joker-card');
+    return cardDiv;
+}
+
+// === SOLITAIRE GAME ===
+const tableDiv = document.getElementById('table');
+const playerHands = [document.getElementById('player1Hand'), document.getElementById('player2Hand')];
+let nextPlayer=0;
+document.getElementById('drawSolitaire').addEventListener('click', ()=>{
+    if(deck.length===0){ alert('Deck is empty!'); return; }
+    const cardFile = deck.pop();
+    const cardDiv=createCard(cardFile);
+
+    const playerHand = playerHands[nextPlayer];
+    const slot = document.createElement('div'); slot.className='hand-slot';
+    slot.appendChild(cardDiv);
+    playerHand.appendChild(slot);
+
+    // Draggable logic
+    cardDiv.draggable = true;
+    cardDiv.addEventListener('dragstart', (e)=>{
+        const style = window.getComputedStyle(cardDiv);
+        e.dataTransfer.setData('text/plain',
+            (parseInt(style.left||0,10)-e.clientX)+','+
+            (parseInt(style.top||0,10)-e.clientY));
+    });
+    cardDiv.addEventListener('dragend', (e)=>{
+        const offset = e.dataTransfer.getData('text/plain').split(',');
+        cardDiv.style.position='absolute';
+        cardDiv.style.left=(e.clientX+parseInt(offset[0],10))+'px';
+        cardDiv.style.top=(e.clientY+parseInt(offset[1],10))+'px';
+        tableDiv.appendChild(cardDiv);
+        // Snap to discard pile if close
+        const discardPile=document.getElementById('discardPile');
+        const discardRect = discardPile.getBoundingClientRect();
+        const cardRect = cardDiv.getBoundingClientRect();
+        const dx = cardRect.left - discardRect.left;
+        const dy = cardRect.top - discardRect.top;
+        const distance = Math.sqrt(dx*dx + dy*dy);
+        if(distance < 100){
+            const discardSlot=document.createElement('div'); discardSlot.className='discard-slot';
+            discardPile.appendChild(discardSlot);
+            discardSlot.appendChild(cardDiv);
+        }
+    });
+
+    nextPlayer=(nextPlayer+1)%2;
+    updateDeckCount();
+});
+
+// === QUICKDRAW GAME ===
+const quickdrawTable = document.getElementById('quickdrawTable');
+document.getElementById('drawQuickdraw').addEventListener('click', ()=>{
+    if(deck.length===0){ alert('Deck empty!'); return; }
+    const cardFile = deck.pop();
+    const cardDiv = createCard(cardFile);
+    const tableRect = quickdrawTable.getBoundingClientRect();
+    cardDiv.style.position='absolute';
+    cardDiv.style.left=Math.random()*(tableRect.width-100)+'px';
+    cardDiv.style.top=Math.random()*(tableRect.height-140)+'px';
+    quickdrawTable.appendChild(cardDiv);
+    updateDeckCount();
+});
+
+// === BLACKJACK GAME ===
+let playerBlackjack = [];
+let dealerBlackjack = [];
+const playerHandDiv = document.getElementById('playerHand');
+const dealerHandDiv = document.getElementById('dealerHand');
+
+document.getElementById('hitBtn').addEventListener('click', ()=>{blackjackDraw(playerHandDiv,playerBlackjack)});
+document.getElementById('standBtn').addEventListener('click', blackjackStand);
+
+function blackjackDraw(handDiv,handArray){
+    if(deck.length===0){ alert('Deck empty!'); return; }
+    const cardFile = deck.pop();
+    const cardDiv = createCard(cardFile);
+    handDiv.appendChild(cardDiv);
+    handArray.push(cardFile);
+    updateDeckCount();
+    const total = calculateBlackjack(handArray);
+    if(total>21) alert('Bust! Total='+total);
+}
+
+function blackjackStand(){
+    // Dealer auto-draw until ≥17
+    let total = calculateBlackjack(dealerBlackjack);
+    while(total<17){
+        blackjackDraw(dealerHandDiv,dealerBlackjack);
+        total=calculateBlackjack(dealerBlackjack);
+    }
+    const playerTotal = calculateBlackjack(playerBlackjack);
+    const dealerTotal = calculateBlackjack(dealerBlackjack);
+    let message='';
+    if(playerTotal>21) message='Player Busts! Dealer wins.';
+    else if(dealerTotal>21) message='Dealer Busts! Player wins!';
+    else if(playerTotal>dealerTotal) message='Player wins!';
+    else if(dealerTotal>playerTotal) message='Dealer wins!';
+    else message='Tie!';
+    alert(`Game Over!\nPlayer: ${playerTotal}\nDealer: ${dealerTotal}\n${message}`);
+}
+
+// Calculate Blackjack hand value
+function calculateBlackjack(handArray){
+    let total=0; let aces=0;
+    for(let card of handArray){
+        if(card==='joker.png'){ total += 10; continue; } // Joker = 10 by default
+        const val = card.split('_')[0];
+        if(val==='j'||val==='q'||val==='k') total+=10;
+        else if(val==='a'){ total+=11; aces++; }
+        else total+=parseInt(val);
+    }
+    while(total>21 && aces>0){ total-=10; aces--; }
+    return total;
+}
+
+// === RESET ===
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+    // Clear all areas
+    tableDiv.innerHTML=''; playerHands.forEach(h=>h.innerHTML=''); document.getElementById('discardPile').innerHTML='<h3>Discard</h3>';
+    quickdrawTable.innerHTML='';
+    playerHandDiv.innerHTML=''; dealerHandDiv.innerHTML=''; playerBlackjack=[]; dealerBlackjack=[];
+    zIndexCounter=1; nextPlayer=0;
+    buildDeck();
+});
+
+// Initialize
+buildDeck();
+</script>
+
+</body>
+</html>
