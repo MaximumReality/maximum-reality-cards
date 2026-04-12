@@ -1,77 +1,91 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DIRECTOR OVERRIDE</title>
-    <style>
-        body { background: #000; color: #00ff41; font-family: monospace; padding: 20px; }
-        textarea { 
-            width: 100%; height: 150px; 
-            background: #050505; color: #00ff41; 
-            border: 1px solid #00ff41; margin-bottom: 10px;
-            padding: 10px; font-family: monospace;
-        }
-        button { 
-            width: 100%; padding: 15px; 
-            background: #003310; color: #00ff41; 
-            border: 1px solid #00ff41; cursor: pointer;
-        }
-    </style>
-    <div id="console" style="background:#000; padding:20px; border:2px solid #00ff41; color:#00ff41; font-family:monospace;">
-    <h2>[ DIRECTOR OVERRIDE // MEDIA UPLINK ]</h2>
+<div id="console" style="background:#000; padding:20px; border:2px solid var(--green); color:var(--green); font-family:monospace; max-width:400px; margin:auto;">
+    <h2 id="uplinkHeader">[ DIRECTOR OVERRIDE ]</h2>
     
-    <textarea id="directorMsg" placeholder="ENTER TRANSMISSION..." style="width:100%; height:80px; background:#111; color:#00ff41; border:1px solid #00ff41; margin-bottom:10px;"></textarea>
+    <div style="margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; background:#111; padding:10px; border:1px solid #333;">
+        <span id="labelL" style="color:#00ff41; font-size:10px;">DIRECTOR</span>
+        <label class="switch" style="position:relative; display:inline-block; width:50px; height:24px;">
+            <input type="checkbox" id="identityToggle" onchange="updateIdentity()" style="opacity:0; width:0; height:0;">
+            <span class="slider" style="position:absolute; cursor:pointer; inset:0; background-color:#003310; border:1px solid #00ff41; transition:.4s;"></span>
+        </label>
+        <span id="labelR" style="color:#666; font-size:10px;">SECRETARY</span>
+    </div>
+
+    <textarea id="directorMsg" placeholder="ENTER TRANSMISSION..." style="width:100%; height:100px; background:#050505; color:#00ff41; border:1px solid #00ff41; margin-bottom:10px; padding:10px; font-family:monospace;"></textarea>
     
-    <label style="display:block; margin-bottom:10px;">ATTACH PROPAGANDA:</label>
-    <input type="file" id="imageInput" accept="image/*" style="margin-bottom:20px; color:#00ff41;">
+    <label style="display:block; margin-bottom:10px; font-size:10px;">ATTACH MEDIA // POSTER // PHOTO:</label>
+    <input type="file" id="imageInput" accept="image/*" style="margin-bottom:20px; color:#00ff41; font-size:10px;">
     
-    <button onclick="transmit()" style="width:100%; padding:15px; background:#003310; color:#00ff41; border:1px solid #00ff41; cursor:pointer;">
-        [ BROADCAST SIGNAL ]
+    <button onclick="transmit()" id="broadcastBtn" style="width:100%; padding:15px; background:#00ff41; color:#000; border:none; font-weight:bold; cursor:pointer; letter-spacing:2px;">
+        [ BROADCAST AS DIRECTOR ]
     </button>
 </div>
 
+<style>
+    /* Sleek Toggle Slider */
+    .switch input:checked + .slider { background-color: #ffb800; border-color: #ffb800; }
+    .slider:before {
+        content: ""; position: absolute; height: 16px; width: 16px; left: 4px; bottom: 3px;
+        background-color: #00ff41; transition: .4s;
+    }
+    input:checked + .slider:before { transform: translateX(24px); background-color: #000; }
+</style>
+
 <script>
+// WEBHOOK CONFIGURATION
+const identityMap = {
+    director: {
+        name: "The Director // BRM",
+        webhook: "https://discord.com/api/webhooks/1492766031733719040/hE1o09FNDfr3Q7Iwgaa5BlqEOj3dNOLfalQrngzjZgV7QBUoppciEljKCF9q4Ui-MI--",
+        avatar: "https://maximumreality.github.io/living/director-avatar.jpg",
+        color: "#00ff41",
+        header: "[ DIRECTOR OVERRIDE ]"
+    },
+    secretary: {
+        name: "Director Vane's Secretary",
+        webhook: "https://discord.com/api/webhooks/1492876377530306781/cxFjH9vZhKgaO9DOJnNUWU9bfL16sj5nn_vD3Sywa-IsiMzyF9fPPkJiTCM0aXHAyIKe",
+        avatar: "https://maximumreality.github.io/living/secretary-avatar.jpeg", 
+        color: "#ffb800",
+        header: "[ ADMINISTRATIVE UPLINK ]"
+    }
+};
+
+function updateIdentity() {
+    const isSecretary = document.getElementById('identityToggle').checked;
+    const active = isSecretary ? identityMap.secretary : identityMap.director;
+    
+    // UI Feedback
+    document.getElementById('uplinkHeader').innerText = active.header;
+    document.getElementById('uplinkHeader').style.color = active.color;
+    document.getElementById('broadcastBtn').style.backgroundColor = active.color;
+    document.getElementById('broadcastBtn').innerText = `[ BROADCAST AS ${isSecretary ? 'SECRETARY' : 'DIRECTOR'} ]`;
+    document.getElementById('directorMsg').style.borderColor = active.color;
+    document.getElementById('labelL').style.color = isSecretary ? "#666" : "#00ff41";
+    document.getElementById('labelR').style.color = isSecretary ? "#ffb800" : "#666";
+}
+
 async function transmit() {
+    const isSecretary = document.getElementById('identityToggle').checked;
+    const active = isSecretary ? identityMap.secretary : identityMap.director;
     const msg = document.getElementById('directorMsg').value;
     const fileInput = document.getElementById('imageInput');
-    const webhookURL = "https://discord.com/api/webhooks/1492766031733719040/hE1o09FNDfr3Q7Iwgaa5BlqEOj3dNOLfalQrngzjZgV7QBUoppciEljKCF9q4Ui-MI--";
 
-    // Use FormData to handle file uploads
     const formData = new FormData();
-    
-    // The JSON part of the message
     const payload = {
-        username: "The Director // BRM",
-        avatar_url: "https://maximumreality.github.io/living/director-avatar.jpg",
+        username: active.name,
+        avatar_url: active.avatar,
         content: msg
     };
 
-    // Append JSON as 'payload_json'
     formData.append('payload_json', JSON.stringify(payload));
-
-    // Append the actual file if one is selected
-    if (fileInput.files[0]) {
-        formData.append('file', fileInput.files[0]);
-    }
+    if (fileInput.files[0]) { formData.append('file', fileInput.files[0]); }
 
     try {
-        const response = await fetch(webhookURL, {
-            method: 'POST',
-            body: formData // No headers needed, browser sets boundary
-        });
-
+        const response = await fetch(active.webhook, { method: 'POST', body: formData });
         if (response.ok) {
             alert("TRANSMISSION SUCCESSFUL.");
             document.getElementById('directorMsg').value = '';
-            fileInput.value = ''; // Reset file picker
-        } else {
-            alert("SIGNAL FAILURE: " + response.statusText);
+            fileInput.value = '';
         }
-    } catch (err) {
-        alert("CRITICAL ERROR: " + err.message);
-    }
+    } catch (err) { alert("SIGNAL FAILURE: " + err.message); }
 }
 </script>
-
-</body>
-</html>
