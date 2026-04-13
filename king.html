@@ -69,15 +69,23 @@ async function transmit() {
     const msg = document.getElementById('directorMsg').value;
     const fileInput = document.getElementById('imageInput');
 
+    // Convert Hex to Decimal for Discord
+    const decimalColor = parseInt(active.color.replace('#', ''), 16);
+
     const formData = new FormData();
     const payload = {
         username: active.name,
         avatar_url: active.avatar,
-        content: msg
+        // We move the message into an embed to get the color bar
+        embeds: [{
+            description: msg,
+            color: decimalColor
+        }]
     };
 
     formData.append('payload_json', JSON.stringify(payload));
     if (fileInput.files[0]) { formData.append('file', fileInput.files[0]); }
+
 
     try {
         const response = await fetch(active.webhook, { method: 'POST', body: formData });
