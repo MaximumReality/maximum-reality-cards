@@ -70,22 +70,21 @@ async function transmit() {
     const fileInput = document.getElementById('imageInput');
     const btn = document.getElementById('broadcastBtn');
 
-    // UI Feedback: Show transmission in progress
-    const originalText = btn.innerText;
     btn.innerText = "[ TRANSMITTING... ]";
     btn.disabled = true;
 
+    // Convert Hex to Decimal
     const decimalColor = parseInt(active.color.replace('#', ''), 16);
     const formData = new FormData();
 
-    // Protocol: Discord requires at least one of these to be non-empty
     const payload = {
         username: active.name,
         avatar_url: active.avatar,
         embeds: [{
-            description: msg || "[ NO VERBAL TRANSMISSION ]",
+            // \u200b is the invisible character so photos send without words
+            description: msg || "\u200b", 
             color: decimalColor,
-            timestamp: new Date().toISOString()
+            footer: { text: "Sector 9 Oversight // BRM" }
         }]
     };
 
@@ -98,7 +97,7 @@ async function transmit() {
     try {
         const response = await fetch(active.webhook, { 
             method: 'POST', 
-            body: formData // Note: DO NOT set Content-Type header; the browser does it for FormData
+            body: formData 
         });
 
         if (response.ok) {
@@ -106,15 +105,13 @@ async function transmit() {
             document.getElementById('directorMsg').value = '';
             fileInput.value = '';
         } else {
-            const errData = await response.json();
-            alert(`SIGNAL FAILURE: ${response.status} - ${errData.message}`);
+            const err = await response.json();
+            alert("SIGNAL FAILURE: " + err.message);
         }
     } catch (err) { 
-        alert("SIGNAL FAILURE: Check Uplink Connection."); 
-        console.error(err);
+        alert("SIGNAL FAILURE: Check Uplink."); 
     } finally {
-        btn.innerText = originalText;
         btn.disabled = false;
+        updateIdentity(); // Resets button text/color based on toggle
     }
 }
-
