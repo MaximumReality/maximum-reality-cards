@@ -68,50 +68,32 @@ async function transmit() {
     const active = isSecretary ? identityMap.secretary : identityMap.director;
     const msg = document.getElementById('directorMsg').value;
     const fileInput = document.getElementById('imageInput');
-    const btn = document.getElementById('broadcastBtn');
 
-    btn.innerText = "[ TRANSMITTING... ]";
-    btn.disabled = true;
-
-    // Convert Hex to Decimal
+    // Convert Hex to Decimal for Discord
     const decimalColor = parseInt(active.color.replace('#', ''), 16);
-    const formData = new FormData();
 
+    const formData = new FormData();
     const payload = {
         username: active.name,
         avatar_url: active.avatar,
+        // We move the message into an embed to get the color bar
         embeds: [{
-            // \u200b is the invisible character so photos send without words
-            description: msg || "\u200b", 
-            color: decimalColor,
-            footer: { text: "Sector 9 Oversight // BRM" }
+            description: msg,
+            color: decimalColor
         }]
     };
 
     formData.append('payload_json', JSON.stringify(payload));
-    
-    if (fileInput.files[0]) { 
-        formData.append('file', fileInput.files[0]); 
-    }
+    if (fileInput.files[0]) { formData.append('file', fileInput.files[0]); }
+
 
     try {
-        const response = await fetch(active.webhook, { 
-            method: 'POST', 
-            body: formData 
-        });
-
+        const response = await fetch(active.webhook, { method: 'POST', body: formData });
         if (response.ok) {
             alert("TRANSMISSION SUCCESSFUL.");
             document.getElementById('directorMsg').value = '';
             fileInput.value = '';
-        } else {
-            const err = await response.json();
-            alert("SIGNAL FAILURE: " + err.message);
         }
-    } catch (err) { 
-        alert("SIGNAL FAILURE: Check Uplink."); 
-    } finally {
-        btn.disabled = false;
-        updateIdentity(); // Resets button text/color based on toggle
-    }
+    } catch (err) { alert("SIGNAL FAILURE: " + err.message); }
 }
+</script>
