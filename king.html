@@ -1,4 +1,4 @@
-<div id="console" style="background:#000; padding:20px; border:2px solid var(--green); color:var(--green); font-family:monospace; max-width:400px; margin:auto;">
+<div id="console" style="background:#000; padding:20px; border:2px solid #00ff41; color:#00ff41; font-family:monospace; max-width:400px; margin:auto;">
     <h2 id="uplinkHeader">[ DIRECTOR OVERRIDE ]</h2>
     
     <div style="margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; background:#111; padding:10px; border:1px solid #333;">
@@ -21,7 +21,6 @@
 </div>
 
 <style>
-    /* Sleek Toggle Slider */
     .switch input:checked + .slider { background-color: #ffb800; border-color: #ffb800; }
     .slider:before {
         content: ""; position: absolute; height: 16px; width: 16px; left: 4px; bottom: 3px;
@@ -31,7 +30,6 @@
 </style>
 
 <script>
-// WEBHOOK CONFIGURATION
 const identityMap = {
     director: {
         name: "The Director // BRM",
@@ -53,7 +51,6 @@ function updateIdentity() {
     const isSecretary = document.getElementById('identityToggle').checked;
     const active = isSecretary ? identityMap.secretary : identityMap.director;
     
-    // UI Feedback
     document.getElementById('uplinkHeader').innerText = active.header;
     document.getElementById('uplinkHeader').style.color = active.color;
     document.getElementById('broadcastBtn').style.backgroundColor = active.color;
@@ -69,16 +66,15 @@ async function transmit() {
     const msg = document.getElementById('directorMsg').value;
     const fileInput = document.getElementById('imageInput');
 
-    // Convert Hex to Decimal for Discord
     const decimalColor = parseInt(active.color.replace('#', ''), 16);
-
     const formData = new FormData();
+    
     const payload = {
         username: active.name,
         avatar_url: active.avatar,
-        // We move the message into an embed to get the color bar
         embeds: [{
-            description: msg,
+            // FALLBACK: \u200b allows the transmission to proceed without text
+            description: msg || "\u200b",
             color: decimalColor
         }]
     };
@@ -86,13 +82,14 @@ async function transmit() {
     formData.append('payload_json', JSON.stringify(payload));
     if (fileInput.files[0]) { formData.append('file', fileInput.files[0]); }
 
-
     try {
         const response = await fetch(active.webhook, { method: 'POST', body: formData });
         if (response.ok) {
             alert("TRANSMISSION SUCCESSFUL.");
             document.getElementById('directorMsg').value = '';
             fileInput.value = '';
+            // Silent reset to current identity state
+            updateIdentity();
         }
     } catch (err) { alert("SIGNAL FAILURE: " + err.message); }
 }
